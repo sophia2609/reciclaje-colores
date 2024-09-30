@@ -195,7 +195,6 @@
             const objectElement = document.createElement('div');
             objectElement.className = 'fallingObject';
             objectElement.textContent = randomObject.content;
-            objectElement.setAttribute('draggable', true);
             objectElement.setAttribute('data-type', randomObject.type);
             objectElement.style.left = Math.random() * 420 + 'px';
             objectElement.style.top = '0px';
@@ -213,41 +212,53 @@
                 }
             }, speed);
 
-            objectElement.addEventListener('dragstart', dragStart);
+            // Eventos para touch
+            objectElement.addEventListener('touchstart', touchStart);
+            objectElement.addEventListener('touchmove', touchMove);
+            objectElement.addEventListener('touchend', touchEnd);
         }
 
-        function dragStart(event) {
-            event.dataTransfer.setData('text', event.target.dataset.type);
-            setTimeout(() => {
-                event.target.style.visibility = 'hidden';
-            }, 0);
+        let activeElement = null;
+
+        function touchStart(event) {
+            activeElement = event.target;
         }
 
-        document.querySelectorAll('.bin').forEach(bin => {
-            bin.addEventListener('dragover', dragOver);
-            bin.addEventListener('drop', drop);
-        });
-
-        function dragOver(event) {
-            event.preventDefault();
-        }
-
-        function drop(event) {
-            const droppedType = event.dataTransfer.getData('text');
-            const binType = event.target.dataset.type;
-
-            if (droppedType === binType) {
-                score++;
-            } else {
-                score--;
+        function touchMove(event) {
+            if (activeElement) {
+                const touch = event.touches[0];
+                activeElement.style.left = touch.pageX - 40 + 'px'; // Mover al centro del toque
+                activeElement.style.top = touch.pageY - 40 + 'px';
             }
+        }
 
-            updateScoreDisplay();
-            document.querySelectorAll('.fallingObject').forEach(obj => {
-                if (obj.style.visibility === 'hidden') {
-                    obj.remove();
+        function touchEnd(event) {
+            const bins = document.querySelectorAll('.bin');
+            bins.forEach(bin => {
+                const binRect = bin.getBoundingClientRect();
+                const objRect = activeElement.getBoundingClientRect();
+
+                // Verifica si el objeto está dentro de los límites del contenedor
+                if (
+                    objRect.left < binRect.right &&
+                    objRect.right > binRect.left &&
+                    objRect.top < binRect.bottom &&
+                    objRect.bottom > binRect.top
+                ) {
+                    const droppedType = activeElement.dataset.type;
+                    const binType = bin.dataset.type;
+
+                    if (droppedType === binType) {
+                        score++;
+                    } else {
+                        score--;
+                    }
+
+                    updateScoreDisplay();
                 }
             });
+            activeElement.remove(); // Eliminar el objeto después de soltarlo
+            activeElement = null; // Reiniciar el elemento activo
         }
 
         function updateScoreDisplay() {
@@ -272,16 +283,5 @@
             scoreList.innerHTML = ''; 
             bestScores.forEach((s, index) => {
                 const li = document.createElement('li');
-                li.textContent = `#${index + 1}: ${s} puntos`;
-                scoreList.appendChild(li);
-            });
-        }
+                li
 
-        function retryGame() {
-            startGame(); // Reiniciar el juego manteniendo las puntuaciones anteriores
-        }
-
-        startGame(); // Comienza el juego al cargar la página
-    </script>
-</body>
-</html>
